@@ -351,7 +351,7 @@ final class HPack {
     }
 
     // removal of old entries as per 4.4
-    public function tableResize(int $maxSize = null) {
+    public function resizeTable(int $maxSize = null) {
         if (isset($maxSize)) {
             $this->maxSize = $maxSize;
         }
@@ -500,7 +500,7 @@ final class HPack {
         return $out . \chr($int >> $i);
     }
 
-    public static function encode(array $headers): string {
+    public function encode(array $headers): string {
         // @TODO implementation is deliberately primitive... [doesn't use any dynamic table...]
         $output = "";
 
