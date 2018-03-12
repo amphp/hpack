@@ -530,5 +530,3 @@ final class HPack {
         return $output;
     }
 }
-
-HPack::init();

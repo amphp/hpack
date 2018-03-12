@@ -36,7 +36,10 @@
     "autoload": {
         "psr-4": {
             "Amp\\Http\\": "src"
-        }
+        },
+        "files": [
+            "src/init.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
