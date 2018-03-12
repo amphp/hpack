@@ -1,8 +1,8 @@
 <?php
 
-namespace Amp\Http\Hpack\Test;
+namespace Amp\Http\HPack\Test;
 
-use Amp\Http\Hpack;
+use Amp\Http\HPack;
 use PHPUnit\Framework\TestCase;
 
 /** @group hpack */

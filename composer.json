@@ -40,7 +40,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Amp\\Http\\Hpack\\Test\\": "test"
+            "Amp\\Http\\HPack\\Test\\": "test"
         }
     },
     "config": {
