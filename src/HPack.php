@@ -464,7 +464,7 @@ final class HPack {
                     \array_unshift($this->headers, $header);
                     $this->size += 32 + \strlen($header[0]) + \strlen($header[1]);
                     if ($this->maxSize < $this->size) {
-                        $this->tableResize();
+                        $this->resizeTable();
                     }
                 }
 
@@ -479,7 +479,7 @@ final class HPack {
                 }
 
                 $name = $value = '';
-                $this->tableResize($index);
+                $this->resizeTable($index);
             }
 
             $size += \strlen($name) + \strlen($value);
