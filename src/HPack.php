@@ -192,7 +192,7 @@ final class HPack {
         for ($off = $i = 0; $i < $len; $i++) {
             list($lookup, $chr) = $lookup[$input[$i]];
 
-            if ($chr !== null) {
+            if ($chr != null) {
                 $out[$off++] = $chr;
                 if (isset($chr[1])) {
                     $out[$off++] = $chr[1];
@@ -254,7 +254,8 @@ final class HPack {
             $byte = $bitCount >> 3;
 
             foreach ($codes[$bitCount % 8][$chr] as $bits) {
-                $out[$byte] |= $bits;
+                // Note: |= can't be used with strings in PHP
+                $out[$byte] = $out[$byte] | $bits;
                 $byte++;
             }
 
@@ -264,7 +265,8 @@ final class HPack {
         $bytes = $bitCount / 8;
         $e = (int) \ceil($bytes);
         if ($e !== $bytes) {
-            $out[$e - 1] |= \chr(0xFF >> $bitCount % 8);
+            // Note: |= can't be used with strings in PHP
+            $out[$e - 1] = $out[$e - 1] | \chr(0xFF >> $bitCount % 8);
         }
 
         return \substr($out, 0, $e);
