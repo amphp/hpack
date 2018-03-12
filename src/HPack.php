@@ -90,7 +90,8 @@ final class HPack {
     /** @var int Current table size. */
     private $size = 0;
 
-    public static function init() {
+    /** Called via bindTo(), see end of file */
+    private static function init() {
         self::$huffmanLookup = self::huffmanLookupInit();
         self::$huffmanCodes = self::huffmanCodesInit();
         self::$huffmanLengths = self::huffmanLengthsInit();
@@ -130,7 +131,7 @@ final class HPack {
 
                 $key = \str_pad(
                     \decbin($bits & ((1 << ((($offlen - 1) % 8) + 1)) - 1)),
-                    ((($offlen - 1) % 8) + 1),
+                    (($offlen - 1) % 8) + 1,
                     "0",
                     STR_PAD_LEFT
                 );
@@ -156,9 +157,11 @@ final class HPack {
                             [&$cur[0], $next[$key][1] != "" ? $next[$key][1] . $cur[1] : ""];
                     }
 
-                    unset($next[$key]);
+                    unset($next[$key], $cur);
                 }
             }
+
+            unset($terminal);
         }
 
         $memoize = [];
@@ -166,7 +169,7 @@ final class HPack {
             foreach ($terminals[$off] as &$terminal) {
                 $next = &$terminal[1];
                 foreach ($next as $k => $v) {
-                    if (\strlen($k) != 1) {
+                    if (\strlen($k) !== 1) {
                         $next[$memoize[$k] ?? $memoize[$k] = \chr(\bindec($k))] = $v;
                         unset($next[$k]);
                     }
@@ -189,7 +192,7 @@ final class HPack {
         for ($off = $i = 0; $i < $len; $i++) {
             list($lookup, $chr) = $lookup[$input[$i]];
 
-            if ($chr != null) {
+            if ($chr !== null) {
                 $out[$off++] = $chr;
                 if (isset($chr[1])) {
                     $out[$off++] = $chr[1];
@@ -246,22 +249,22 @@ final class HPack {
         $len = \strlen($input);
         $out = \str_repeat("\0", $len * 5 + 1); // max length
 
-        for ($bitcount = $i = 0; $i < $len; $i++) {
+        for ($bitCount = $i = 0; $i < $len; $i++) {
             $chr = $input[$i];
-            $byte = $bitcount >> 3;
+            $byte = $bitCount >> 3;
 
-            foreach ($codes[$bitcount % 8][$chr] as $bits) {
-                $out[$byte] = $out[$byte] | $bits;
+            foreach ($codes[$bitCount % 8][$chr] as $bits) {
+                $out[$byte] |= $bits;
                 $byte++;
             }
 
-            $bitcount += $lens[$chr];
+            $bitCount += $lens[$chr];
         }
 
-        $bytes = $bitcount / 8;
+        $bytes = $bitCount / 8;
         $e = (int) \ceil($bytes);
-        if ($e != $bytes) {
-            $out[$e - 1] = $out[$e - 1] | \chr(0xFF >> $bitcount % 8);
+        if ($e !== $bytes) {
+            $out[$e - 1] |= \chr(0xFF >> $bitCount % 8);
         }
 
         return \substr($out, 0, $e);
@@ -352,7 +355,7 @@ final class HPack {
 
     // removal of old entries as per 4.4
     public function resizeTable(int $maxSize = null) {
-        if (isset($maxSize)) {
+        if ($maxSize !== null) {
             $this->maxSize = $maxSize;
         }
 
@@ -365,11 +368,11 @@ final class HPack {
     public function decode(string $input, int $maxSize) { /* : ?array */
         $headers = [];
         $off = 0;
-        $inputlen = \strlen($input);
+        $inputLength = \strlen($input);
         $size = 0;
 
         // dynamic $table as per 2.3.2
-        while ($off < $inputlen) {
+        while ($off < $inputLength) {
             $index = \ord($input[$off++]);
 
             if ($index & 0x80) {
@@ -397,14 +400,14 @@ final class HPack {
 
                 if ($index & ($dynamic ? 0x3f : 0x0f)) { // separate length
                     if ($dynamic) {
-                        if ($index == 0x7f) {
+                        if ($index === 0x7f) {
                             $index = self::decodeDynamicInteger($input, $off) + 0x3f;
                         } else {
                             $index &= 0x3f;
                         }
                     } else {
                         $index &= 0x0f;
-                        if ($index == 0x0f) {
+                        if ($index === 0x0f) {
                             $index = self::decodeDynamicInteger($input, $off) + 0x0f;
                         }
                     }
@@ -419,11 +422,11 @@ final class HPack {
                     $huffman = $len & 0x80;
                     $len &= 0x7f;
 
-                    if ($len == 0x7f) {
+                    if ($len === 0x7f) {
                         $len = self::decodeDynamicInteger($input, $off) + 0x7f;
                     }
 
-                    if ($inputlen - $off < $len || $len <= 0) {
+                    if ($inputLength - $off < $len || $len <= 0) {
                         return null;
                     }
 
@@ -436,7 +439,7 @@ final class HPack {
                     $off += $len;
                 }
 
-                if ($off === $inputlen) {
+                if ($off === $inputLength) {
                     return null;
                 }
 
@@ -444,11 +447,11 @@ final class HPack {
                 $huffman = $len & 0x80;
                 $len &= 0x7f;
 
-                if ($len == 0x7f) {
+                if ($len === 0x7f) {
                     $len = self::decodeDynamicInteger($input, $off) + 0x7f;
                 }
 
-                if ($inputlen - $off < $len || $len < 0) {
+                if ($inputLength - $off < $len || $len < 0) {
                     return null;
                 }
 
@@ -470,7 +473,7 @@ final class HPack {
 
                 list($name, $value) = $headers[] = $header;
             } else { // if ($index & 0x20) {
-                if ($index == 0x3f) {
+                if ($index === 0x3f) {
                     $index = self::decodeDynamicInteger($input, $off) + 0x40;
                 }
 
@@ -531,4 +534,6 @@ final class HPack {
     }
 }
 
-HPack::init();
+(function () {
+    static::init();
+})->bindTo(null, HPack::class)();
