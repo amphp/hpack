@@ -119,7 +119,7 @@ final class HPack {
                 $next = &$encodingAccess[$bit];
 
                 for ($byte = (int) (($offlen - 1) / 8); $byte > 0; $byte--) {
-                    $cur = \str_pad(\decbin(($bits >> ($byte * 8 - (0x30 - $offlen) % 8)) & 0xFF), 8, "0", STR_PAD_LEFT);
+                    $cur = \str_pad(\decbin(($bits >> ($byte * 8 - ((0x30 - $offlen) & 7))) & 0xFF), 8, "0", STR_PAD_LEFT);
                     if (isset($next[$cur]) && $next[$cur][0] !== $encodingAccess[0]) {
                         $next = &$next[$cur][0];
                     } else {
@@ -130,15 +130,15 @@ final class HPack {
                 }
 
                 $key = \str_pad(
-                    \decbin($bits & ((1 << ((($offlen - 1) % 8) + 1)) - 1)),
-                    (($offlen - 1) % 8) + 1,
+                    \decbin($bits & ((1 << ((($offlen - 1) & 7) + 1)) - 1)),
+                    (($offlen - 1) & 7) + 1,
                     "0",
                     STR_PAD_LEFT
                 );
                 $next[$key] = [null, $chr > 0xFF ? "" : \chr($chr)];
 
-                if ($offlen % 8) {
-                    $terminals[$offlen % 8][] = [$key, &$next];
+                if ($offlen & 7) {
+                    $terminals[$offlen & 7][] = [$key, &$next];
                 } else {
                     $next[$key][0] = &$encodingAccess[0];
                 }
@@ -184,7 +184,12 @@ final class HPack {
         return $encodingAccess[0];
     }
 
-    public static function huffmanDecode(string $input): string {
+    /**
+     * @param string $input
+     *
+     * @return string|null Returns null if decoding fails.
+     */
+    public static function huffmanDecode(string $input) { /* : ?string */
         $lookup = self::$huffmanLookup;
         $len = \strlen($input);
         $out = \str_repeat("\0", $len / 5 * 8 + 1); // max length
@@ -223,7 +228,7 @@ final class HPack {
                     $lookup[$bit][\chr($chr)][] = \chr(
                         $byte
                         ? $bits >> ($len - ($bytes - $byte + 1) * 8 + $bit)
-                        : ($bits << ((0x30 - $len - $bit) % 8))
+                        : ($bits << ((0x30 - $len - $bit) & 7))
                     );
                 }
             }
@@ -253,7 +258,7 @@ final class HPack {
             $chr = $input[$i];
             $byte = $bitCount >> 3;
 
-            foreach ($codes[$bitCount % 8][$chr] as $bits) {
+            foreach ($codes[$bitCount & 7][$chr] as $bits) {
                 // Note: |= can't be used with strings in PHP
                 $out[$byte] = $out[$byte] | $bits;
                 $byte++;
@@ -266,7 +271,7 @@ final class HPack {
         $e = (int) \ceil($bytes);
         if ($e !== $bytes) {
             // Note: |= can't be used with strings in PHP
-            $out[$e - 1] = $out[$e - 1] | \chr(0xFF >> $bitCount % 8);
+            $out[$e - 1] = $out[$e - 1] | \chr(0xFF >> ($bitCount & 7));
         }
 
         return \substr($out, 0, $e);
@@ -355,7 +360,11 @@ final class HPack {
         return $int;
     }
 
-    // removal of old entries as per 4.4
+    /**
+     * Resizes the table to the given max size, removing old entries as per section 4.4 if necessary.
+     *
+     * @param int|null $maxSize
+     */
     public function resizeTable(int $maxSize = null) {
         if ($maxSize !== null) {
             $this->maxSize = $maxSize;
@@ -367,6 +376,12 @@ final class HPack {
         }
     }
 
+    /**
+     * @param string $input Encoded headers.
+     * @param int $maxSize Maximum length of the decoded header string.
+     *
+     * @return string[][]|null Returns null if decoding fails or if $maxSize is exceeded.
+     */
     public function decode(string $input, int $maxSize) { /* : ?array */
         $headers = [];
         $off = 0;
@@ -505,6 +520,11 @@ final class HPack {
         return $out . \chr($int >> $i);
     }
 
+    /**
+     * @param string[][] $headers
+     *
+     * @return string
+     */
     public function encode(array $headers): string {
         // @TODO implementation is deliberately primitive... [doesn't use any dynamic table...]
         $output = "";
