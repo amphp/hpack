@@ -24,7 +24,7 @@ class HPackTest extends TestCase {
         $root = __DIR__."/../vendor/http2jp/hpack-test-case";
         $paths = \glob("$root/*/*.json");
         foreach ($paths as $path) {
-            if (\basename(\dirname($path)) == "raw-data") {
+            if (\basename(\dirname($path)) === "raw-data") {
                 continue;
             }
 
@@ -49,7 +49,6 @@ class HPackTest extends TestCase {
         foreach ($cases as $i => list($input, $output)) {
             $hpack = new HPack;
             $encoded = $hpack->encode($input);
-            $hpack = new HPack;
             $decoded = $hpack->decode($encoded, self::MAX_LENGTH);
             \sort($output);
             \sort($decoded);

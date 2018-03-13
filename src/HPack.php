@@ -118,7 +118,7 @@ final class HPack {
                 $offlen = $len + $bit;
                 $next = &$encodingAccess[$bit];
 
-                for ($byte = (int) (($offlen - 1) / 8); $byte > 0; $byte--) {
+                for ($byte = ($offlen - 1) >> 3; $byte > 0; $byte--) {
                     $cur = \str_pad(\decbin(($bits >> ($byte * 8 - ((0x30 - $offlen) & 7))) & 0xFF), 8, "0", STR_PAD_LEFT);
                     if (isset($next[$cur]) && $next[$cur][0] !== $encodingAccess[0]) {
                         $next = &$next[$cur][0];
@@ -222,7 +222,7 @@ final class HPack {
             $len = self::HUFFMAN_CODE_LENGTHS[$chr];
 
             for ($bit = 0; $bit < 8; $bit++) {
-                $bytes = \floor(($len + $bit - 1) / 8);
+                $bytes = ($len + $bit - 1) >> 3;
 
                 for ($byte = $bytes; $byte >= 0; $byte--) {
                     $lookup[$bit][\chr($chr)][] = \chr(
@@ -267,9 +267,7 @@ final class HPack {
             $bitCount += $lens[$chr];
         }
 
-        $bytes = $bitCount / 8;
-        $e = (int) \ceil($bytes);
-        if ($e !== $bytes) {
+        if ($bitCount & 7) {
             // Note: |= can't be used with strings in PHP
             $out[$e - 1] = $out[$e - 1] | \chr(0xFF >> ($bitCount & 7));
         }
