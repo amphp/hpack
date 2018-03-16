@@ -269,10 +269,10 @@ final class HPack {
 
         if ($bitCount & 7) {
             // Note: |= can't be used with strings in PHP
-            $out[$e - 1] = $out[$e - 1] | \chr(0xFF >> ($bitCount & 7));
+            $out[$byte - 1] = $out[$byte - 1] | \chr(0xFF >> ($bitCount & 7));
         }
 
-        return \substr($out, 0, $e);
+        return $i ? \substr($out, 0, $byte) : '';
     }
 
     /** @see RFC 7541 Appendix A */
