@@ -75,6 +75,8 @@ final class HPack {
         /* end! */ 30
     ];
 
+    const DEFAULT_MAX_SIZE = 4096;
+
     private static $huffmanLookup;
     private static $huffmanCodes;
     private static $huffmanLengths;
@@ -84,8 +86,11 @@ final class HPack {
     /** @var string[][] */
     private $headers = [];
 
+    /** @var int */
+    private $hardMaxSize = self::DEFAULT_MAX_SIZE;
+
     /** @var int Max table size. */
-    private $maxSize = 4096;
+    private $currentMaxSize = self::DEFAULT_MAX_SIZE;
 
     /** @var int Current table size. */
     private $size = 0;
@@ -191,10 +196,10 @@ final class HPack {
      */
     public static function huffmanDecode(string $input) { /* : ?string */
         $lookup = self::$huffmanLookup;
-        $len = \strlen($input);
-        $out = \str_repeat("\0", $len / 5 * 8 + 1); // max length
+        $length = \strlen($input);
+        $out = \str_repeat("\0", $length / 5 * 8 + 1); // max length
 
-        for ($off = $i = 0; $i < $len; $i++) {
+        for ($off = $i = 0; $i < $length; $i++) {
             list($lookup, $chr) = $lookup[$input[$i]];
 
             if ($chr != null) {
@@ -219,16 +224,16 @@ final class HPack {
 
         for ($chr = 0; $chr <= 0xFF; $chr++) {
             $bits = self::HUFFMAN_CODE[$chr];
-            $len = self::HUFFMAN_CODE_LENGTHS[$chr];
+            $length = self::HUFFMAN_CODE_LENGTHS[$chr];
 
             for ($bit = 0; $bit < 8; $bit++) {
-                $bytes = ($len + $bit - 1) >> 3;
+                $bytes = ($length + $bit - 1) >> 3;
 
                 for ($byte = $bytes; $byte >= 0; $byte--) {
                     $lookup[$bit][\chr($chr)][] = \chr(
                         $byte
-                        ? $bits >> ($len - ($bytes - $byte + 1) * 8 + $bit)
-                        : ($bits << ((0x30 - $len - $bit) & 7))
+                            ? $bits >> ($length - ($bytes - $byte + 1) * 8 + $bit)
+                            : ($bits << ((0x30 - $length - $bit) & 7))
                     );
                 }
             }
@@ -249,12 +254,12 @@ final class HPack {
 
     public static function huffmanEncode(string $input): string {
         $codes = self::$huffmanCodes;
-        $lens = self::$huffmanLengths;
+        $lengths = self::$huffmanLengths;
 
-        $len = \strlen($input);
-        $out = \str_repeat("\0", $len * 5 + 1); // max length
+        $length = \strlen($input);
+        $out = \str_repeat("\0", $length * 5 + 1); // max length
 
-        for ($bitCount = $i = 0; $i < $len; $i++) {
+        for ($bitCount = $i = 0; $i < $length; $i++) {
             $chr = $input[$i];
             $byte = $bitCount >> 3;
 
@@ -264,7 +269,7 @@ final class HPack {
                 $byte++;
             }
 
-            $bitCount += $lens[$chr];
+            $bitCount += $lengths[$chr];
         }
 
         if ($bitCount & 7) {
@@ -359,16 +364,33 @@ final class HPack {
     }
 
     /**
-     * Resizes the table to the given max size, removing old entries as per section 4.4 if necessary.
-     *
-     * @param int|null $maxSize
+     * @param int $maxSize Upper limit on table size.
      */
-    public function resizeTable(int $maxSize = null) {
-        if ($maxSize !== null) {
-            $this->maxSize = $maxSize;
+    public function __construct(int $maxSize = self::DEFAULT_MAX_SIZE) {
+        $this->hardMaxSize = $maxSize;
+    }
+
+    /**
+     * Sets the upper limit on table size. Dynamic table updates requesting a size above this size will result in a
+     * decoding error (i.e., returning null from decode()).
+     *
+     * @param int $maxSize
+     */
+    public function setTableSizeLimit(int $maxSize) {
+        $this->hardMaxSize = $maxSize;
+    }
+
+    /**
+     * Resizes the table to the given size, removing old entries as per section 4.4 if necessary.
+     *
+     * @param int|null $size
+     */
+    public function resizeTable(int $size = null) {
+        if ($size !== null) {
+            $this->currentMaxSize = \min($size, $this->hardMaxSize);
         }
 
-        while ($this->size > $this->maxSize) {
+        while ($this->size > $this->currentMaxSize) {
             list($name, $value) = \array_pop($this->headers);
             $this->size -= 32 + \strlen($name) + \strlen($value);
         }
@@ -433,71 +455,76 @@ final class HPack {
                         $header = $this->headers[$index - 1 - self::LAST_INDEX];
                     }
                 } else {
-                    $len = \ord($input[$off++]);
-                    $huffman = $len & 0x80;
-                    $len &= 0x7f;
+                    $length = \ord($input[$off++]);
+                    $huffman = $length & 0x80;
+                    $length &= 0x7f;
 
-                    if ($len === 0x7f) {
-                        $len = self::decodeDynamicInteger($input, $off) + 0x7f;
+                    if ($length === 0x7f) {
+                        $length = self::decodeDynamicInteger($input, $off) + 0x7f;
                     }
 
-                    if ($inputLength - $off < $len || $len <= 0) {
+                    if ($inputLength - $off < $length || $length <= 0) {
                         return null;
                     }
 
                     if ($huffman) {
-                        $header = [self::huffmanDecode(\substr($input, $off, $len))];
+                        $header = [self::huffmanDecode(\substr($input, $off, $length))];
                     } else {
-                        $header = [\substr($input, $off, $len)];
+                        $header = [\substr($input, $off, $length)];
                     }
 
-                    $off += $len;
+                    $off += $length;
                 }
 
                 if ($off === $inputLength) {
                     return null;
                 }
 
-                $len = \ord($input[$off++]);
-                $huffman = $len & 0x80;
-                $len &= 0x7f;
+                $length = \ord($input[$off++]);
+                $huffman = $length & 0x80;
+                $length &= 0x7f;
 
-                if ($len === 0x7f) {
-                    $len = self::decodeDynamicInteger($input, $off) + 0x7f;
+                if ($length === 0x7f) {
+                    $length = self::decodeDynamicInteger($input, $off) + 0x7f;
                 }
 
-                if ($inputLength - $off < $len || $len < 0) {
+                if ($inputLength - $off < $length || $length < 0) {
                     return null;
                 }
 
                 if ($huffman) {
-                    $header[1] = self::huffmanDecode(\substr($input, $off, $len));
+                    $header[1] = self::huffmanDecode(\substr($input, $off, $length));
                 } else {
-                    $header[1] = \substr($input, $off, $len);
+                    $header[1] = \substr($input, $off, $length);
                 }
 
-                $off += $len;
+                $off += $length;
 
                 if ($dynamic) {
                     \array_unshift($this->headers, $header);
                     $this->size += 32 + \strlen($header[0]) + \strlen($header[1]);
-                    if ($this->maxSize < $this->size) {
+                    if ($this->currentMaxSize < $this->size) {
                         $this->resizeTable();
                     }
                 }
 
                 list($name, $value) = $headers[] = $header;
             } else { // if ($index & 0x20) {
+                if ($off >= $inputLength) {
+                    return null; // Dynamic table size update must not be the last entry in header block.
+                }
+
                 if ($index === 0x3f) {
                     $index = self::decodeDynamicInteger($input, $off) + 0x40;
                 }
 
-                if ($index > 4096) { // initial limit … may be adjusted??
+                if ($index > $this->hardMaxSize) {
                     return null;
                 }
 
-                $name = $value = '';
                 $this->resizeTable($index);
+
+                continue;
             }
 
             $size += \strlen($name) + \strlen($value);
