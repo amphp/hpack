@@ -29,7 +29,7 @@
         "php": ">=7"
     },
     "require-dev": {
-        "friendsofphp/php-cs-fixer": "^2.3",
+        "amphp/php-cs-fixer-config": "dev-master",
         "http2jp/hpack-test-case": "^1",
         "phpunit/phpunit": "^6"
     },

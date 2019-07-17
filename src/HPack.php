@@ -2,7 +2,8 @@
 
 namespace Amp\Http;
 
-final class HPack {
+final class HPack
+{
     const HUFFMAN_CODE = [
         /* 0x00 */ 0x1ff8, 0x7fffd8, 0xfffffe2, 0xfffffe3, 0xfffffe4, 0xfffffe5, 0xfffffe6, 0xfffffe7,
         /* 0x08 */ 0xfffffe8, 0xffffea, 0x3ffffffc, 0xfffffe9, 0xfffffea, 0x3ffffffd, 0xfffffeb, 0xfffffec,
@@ -97,7 +98,8 @@ final class HPack {
     private $size = 0;
 
     /** Called via bindTo(), see end of file */
-    private static function init() {
+    private static function init() /* : void */
+    {
         self::$huffmanLookup = self::huffmanLookupInit();
         self::$huffmanCodes = self::huffmanCodesInit();
         self::$huffmanLengths = self::huffmanLengthsInit();
@@ -112,7 +114,8 @@ final class HPack {
     }
 
     // (micro-)optimized decode
-    private static function huffmanLookupInit(): array {
+    private static function huffmanLookupInit(): array
+    {
         \gc_disable();
         $encodingAccess = [];
         $terminals = [];
@@ -195,7 +198,8 @@ final class HPack {
      *
      * @return string|null Returns null if decoding fails.
      */
-    public static function huffmanDecode(string $input) { /* : ?string */
+    public static function huffmanDecode(string $input) /* : ?string */
+    {
         $lookup = self::$huffmanLookup;
         $length = \strlen($input);
         $out = \str_repeat("\0", $length / 5 * 8 + 1); // max length
@@ -220,7 +224,8 @@ final class HPack {
         return \substr($out, 0, $off);
     }
 
-    private static function huffmanCodesInit(): array {
+    private static function huffmanCodesInit(): array
+    {
         $lookup = [];
 
         for ($chr = 0; $chr <= 0xFF; $chr++) {
@@ -243,7 +248,8 @@ final class HPack {
         return $lookup;
     }
 
-    private static function huffmanLengthsInit(): array {
+    private static function huffmanLengthsInit(): array
+    {
         $lengths = [];
 
         for ($chr = 0; $chr <= 0xFF; $chr++) {
@@ -253,7 +259,8 @@ final class HPack {
         return $lengths;
     }
 
-    public static function huffmanEncode(string $input): string {
+    public static function huffmanEncode(string $input): string
+    {
         $codes = self::$huffmanCodes;
         $lengths = self::$huffmanLengths;
 
@@ -347,7 +354,8 @@ final class HPack {
         ["www-authenticate", ""]
     ];
 
-    private static function decodeDynamicInteger(string &$input, int &$off): int {
+    private static function decodeDynamicInteger(string &$input, int &$off): int
+    {
         $c = \ord($input[$off++]);
         $int = $c & 0x7f;
         $i = 0;
@@ -367,7 +375,8 @@ final class HPack {
     /**
      * @param int $maxSize Upper limit on table size.
      */
-    public function __construct(int $maxSize = self::DEFAULT_MAX_SIZE) {
+    public function __construct(int $maxSize = self::DEFAULT_MAX_SIZE)
+    {
         $this->hardMaxSize = $maxSize;
     }
 
@@ -377,7 +386,8 @@ final class HPack {
      *
      * @param int $maxSize
      */
-    public function setTableSizeLimit(int $maxSize) {
+    public function setTableSizeLimit(int $maxSize) /* : void */
+    {
         $this->hardMaxSize = $maxSize;
     }
 
@@ -386,7 +396,8 @@ final class HPack {
      *
      * @param int|null $size
      */
-    public function resizeTable(int $size = null) {
+    public function resizeTable(int $size = null) /* : void */
+    {
         if ($size !== null) {
             $this->currentMaxSize = \min($size, $this->hardMaxSize);
         }
@@ -403,7 +414,8 @@ final class HPack {
      *
      * @return string[][]|null Returns null if decoding fails or if $maxSize is exceeded.
      */
-    public function decode(string $input, int $maxSize) { /* : ?array */
+    public function decode(string $input, int $maxSize) /* : ?array */
+    {
         $headers = [];
         $off = 0;
         $inputLength = \strlen($input);
@@ -539,7 +551,8 @@ final class HPack {
         return $headers;
     }
 
-    private static function encodeDynamicInteger(int $int): string {
+    private static function encodeDynamicInteger(int $int): string
+    {
         $out = "";
         for ($i = 0; ($int >> $i) > 0x80; $i += 7) {
             $out .= \chr(0x80 | (($int >> $i) & 0x7f));
@@ -553,7 +566,8 @@ final class HPack {
      *
      * @return string
      */
-    public function encode(array $headers, int $compressionThreshold = self::DEFAULT_COMPRESSION_THRESHOLD): string {
+    public function encode(array $headers, int $compressionThreshold = self::DEFAULT_COMPRESSION_THRESHOLD): string
+    {
         // @TODO implementation is deliberately primitive... [doesn't use any dynamic table...]
         $output = "";
 
@@ -577,7 +591,8 @@ final class HPack {
         return $output;
     }
 
-    private function encodeString(string $value, int $compressionThreshold): string {
+    private function encodeString(string $value, int $compressionThreshold): string
+    {
         $prefix = "\0";
         if (\strlen($value) >= $compressionThreshold) {
             $value = self::huffmanEncode($value);

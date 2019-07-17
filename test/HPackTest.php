@@ -6,13 +6,15 @@ use Amp\Http\HPack;
 use PHPUnit\Framework\TestCase;
 
 /** @group hpack */
-class HPackTest extends TestCase {
+class HPackTest extends TestCase
+{
     const MAX_LENGTH = 8192;
 
     /**
      * @dataProvider provideDecodeCases
      */
-    public function testDecode($cases) {
+    public function testDecode($cases)
+    {
         $hpack = new HPack;
         foreach ($cases as $i => list($input, $output)) {
             $result = $hpack->decode($input, self::MAX_LENGTH);
@@ -20,7 +22,8 @@ class HPackTest extends TestCase {
         }
     }
 
-    public function provideDecodeCases() {
+    public function provideDecodeCases()
+    {
         $root = __DIR__."/../vendor/http2jp/hpack-test-case";
         $paths = \glob("$root/*/*.json");
         foreach ($paths as $path) {
@@ -45,7 +48,8 @@ class HPackTest extends TestCase {
      * @depends testDecode
      * @dataProvider provideEncodeCases
      */
-    public function testEncode($cases) {
+    public function testEncode($cases)
+    {
         foreach ($cases as $i => list($input, $output)) {
             $hpack = new HPack;
             $encoded = $hpack->encode($input);
@@ -67,7 +71,8 @@ class HPackTest extends TestCase {
         }
     }
 
-    public function provideEncodeCases() {
+    public function provideEncodeCases()
+    {
         $root = __DIR__."/../vendor/http2jp/hpack-test-case";
         $paths = \glob("$root/raw-data/*.json");
         foreach ($paths as $path) {
