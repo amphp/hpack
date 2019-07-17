@@ -514,8 +514,9 @@ final class HPack {
                     return null; // Dynamic table size update must not be the last entry in header block.
                 }
 
-                if ($index === 0x3f) {
-                    $index = self::decodeDynamicInteger($input, $off) + 0x40;
+                $index &= 0x1f;
+                if ($index === 0x1f) {
+                    $index = self::decodeDynamicInteger($input, $off) + 0x1f;
                 }
 
                 if ($index > $this->hardMaxSize) {
