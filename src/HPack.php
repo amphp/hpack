@@ -75,6 +75,7 @@ final class HPack {
         /* end! */ 30
     ];
 
+    const DEFAULT_COMPRESSION_THRESHOLD = 128;
     const DEFAULT_MAX_SIZE = 4096;
 
     private static $huffmanLookup;
@@ -548,10 +549,11 @@ final class HPack {
 
     /**
      * @param string[][] $headers
+     * @param int $compressionThreshold Compress strings whose length is at least the number of bytes given.
      *
      * @return string
      */
-    public function encode(array $headers): string {
+    public function encode(array $headers, int $compressionThreshold = self::DEFAULT_COMPRESSION_THRESHOLD): string {
         // @TODO implementation is deliberately primitive... [doesn't use any dynamic table...]
         $output = "";
 
@@ -564,21 +566,29 @@ final class HPack {
                     } else {
                         $output .= "\x0f" . \chr($index - 0x0f);
                     }
-                } elseif (\strlen($name) < 0x7f) {
-                    $output .= "\0" . \chr(\strlen($name)) . $name;
                 } else {
-                    $output .= "\0\x7f" . self::encodeDynamicInteger(\strlen($name) - 0x7f) . $name;
+                    $output .= "\0" . $this->encodeString($name, $compressionThreshold);
                 }
 
-                if (\strlen($value) < 0x7f) {
-                    $output .= \chr(\strlen($value)) . $value;
-                } else {
-                    $output .= "\x7f" . self::encodeDynamicInteger(\strlen($value) - 0x7f) . $value;
-                }
+                $output .= $this->encodeString($value, $compressionThreshold);
             }
         }
 
         return $output;
+    }
+
+    private function encodeString(string $value, int $compressionThreshold): string {
+        $prefix = "\0";
+        if (\strlen($value) >= $compressionThreshold) {
+            $value = self::huffmanEncode($value);
+            $prefix = "\x80";
+        }
+
+        if (\strlen($value) < 0x7f) {
+            return ($prefix | \chr(\strlen($value))) . $value;
+        }
+
+        return ($prefix | "\x7f") . self::encodeDynamicInteger(\strlen($value) - 0x7f) . $value;
     }
 }
 
