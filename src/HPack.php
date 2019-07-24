@@ -235,7 +235,7 @@ final class HPack
         // Check for 0's in padding
         if ($bitCount & 7) {
             $mask = 0xff >> ($bitCount & 7);
-            if ((\ord($input[$i - 1]) & $mask) !== $mask)  {
+            if ((\ord($input[$i - 1]) & $mask) !== $mask) {
                 return null;
             }
         }
