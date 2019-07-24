@@ -201,10 +201,11 @@ final class HPack
     public static function huffmanDecode(string $input) /* : ?string */
     {
         $lookup = self::$huffmanLookup;
+        $lengths = self::$huffmanLengths;
         $length = \strlen($input);
         $out = \str_repeat("\0", $length / 5 * 8 + 1); // max length
 
-        for ($off = $i = 0; $i < $length; $i++) {
+        for ($bitCount = $off = $i = 0; $i < $length; $i++) {
             // Fail if EOS symbol is found.
             if ($input[$i] === "\x3f" && \substr($input, $i, 4) === "\x3f\xff\xff\xff") {
                 return null;
@@ -218,8 +219,10 @@ final class HPack
 
             if ($chr !== null) {
                 $out[$off++] = $chr[0];
+                $bitCount += $lengths[$chr[0]];
                 if (isset($chr[1])) {
                     $out[$off++] = $chr[1];
+                    $bitCount += $lengths[$chr[1]];
                 }
             }
         }
@@ -227,6 +230,14 @@ final class HPack
         // Padding longer than 7-bits
         if ($i && $chr === null) {
             return null;
+        }
+
+        // Check for 0's in padding
+        if ($bitCount & 7) {
+            $mask = 0xff >> ($bitCount & 7);
+            if ((\ord($input[$i - 1]) & $mask) !== $mask)  {
+                return null;
+            }
         }
 
         return \substr($out, 0, $off);
