@@ -76,7 +76,7 @@ final class HPack
         /* end! */ 30
     ];
 
-    const DEFAULT_COMPRESSION_THRESHOLD = 128;
+    const DEFAULT_COMPRESSION_THRESHOLD = 1024;
     const DEFAULT_MAX_SIZE = 4096;
 
     private static $huffmanLookup;
