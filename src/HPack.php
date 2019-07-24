@@ -207,17 +207,15 @@ final class HPack
         for ($off = $i = 0; $i < $length; $i++) {
             list($lookup, $chr) = $lookup[$input[$i]];
 
-            if ($chr != null) {
-                $out[$off++] = $chr;
-                if (isset($chr[1])) {
-                    $out[$off++] = $chr[1];
-                    continue;
-                }
-                continue;
-            }
-
             if ($chr === "") {
                 return null;
+            }
+
+            if ($chr !== null) {
+                $out[$off++] = $chr[0];
+                if (isset($chr[1])) {
+                    $out[$off++] = $chr[1];
+                }
             }
         }
 
@@ -482,6 +480,9 @@ final class HPack
 
                     if ($huffman) {
                         $header = [self::huffmanDecode(\substr($input, $off, $length))];
+                        if ($header[0] === null) {
+                            return null;
+                        }
                     } else {
                         $header = [\substr($input, $off, $length)];
                     }
@@ -507,6 +508,9 @@ final class HPack
 
                 if ($huffman) {
                     $header[1] = self::huffmanDecode(\substr($input, $off, $length));
+                    if ($header[1] === null) {
+                        return null;
+                    }
                 } else {
                     $header[1] = \substr($input, $off, $length);
                 }
