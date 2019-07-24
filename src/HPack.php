@@ -476,6 +476,10 @@ final class HPack
                         $header = $this->headers[$index - 1 - self::LAST_INDEX];
                     }
                 } else {
+                    if ($off >= $inputLength) {
+                        return null;
+                    }
+
                     $length = \ord($input[$off++]);
                     $huffman = $length & 0x80;
                     $length &= 0x7f;
@@ -500,7 +504,7 @@ final class HPack
                     $off += $length;
                 }
 
-                if ($off === $inputLength) {
+                if ($off >= $inputLength) {
                     return null;
                 }
 
