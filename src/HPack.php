@@ -205,6 +205,11 @@ final class HPack
         $out = \str_repeat("\0", $length / 5 * 8 + 1); // max length
 
         for ($off = $i = 0; $i < $length; $i++) {
+            // Fail if EOS symbol is found.
+            if ($input[$i] === "\x3f" && \substr($input, $i, 4) === "\x3f\xff\xff\xff") {
+                return null;
+            }
+
             list($lookup, $chr) = $lookup[$input[$i]];
 
             if ($chr === "") {
@@ -217,6 +222,11 @@ final class HPack
                     $out[$off++] = $chr[1];
                 }
             }
+        }
+
+        // Padding longer than 7-bits
+        if ($i && $chr === null) {
+            return null;
         }
 
         return \substr($out, 0, $off);
