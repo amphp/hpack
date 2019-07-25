@@ -217,17 +217,19 @@ final class HPack
 
             list($lookup, $chr) = $lookup[$input[$i]];
 
-            if ($chr === "") {
-                return null;
+            if ($chr == null) { // Loose type check intentional to match both null and empty string.
+                if ($chr === "") {
+                    return null;
+                }
+
+                continue;
             }
 
-            if ($chr !== null) {
-                $out[$off++] = $chr[0];
-                $bitCount += $lengths[$chr[0]];
-                if (isset($chr[1])) {
-                    $out[$off++] = $chr[1];
-                    $bitCount += $lengths[$chr[1]];
-                }
+            $out[$off++] = $chr[0];
+            $bitCount += $lengths[$chr[0]];
+            if (isset($chr[1])) {
+                $out[$off++] = $chr[1];
+                $bitCount += $lengths[$chr[1]];
             }
         }
 
