@@ -205,28 +205,27 @@ final class HPack
         $length = \strlen($input);
         $out = \str_repeat("\0", $length / 5 * 8 + 1); // max length
 
+        // Fail if EOS symbol is found.
+        if (\strpos($input, "\x3f\xff\xff\xff") !== false) {
+            return null;
+        }
+
         for ($bitCount = $off = $i = 0; $i < $length; $i++) {
-            // Fail if EOS symbol is found.
-            if ($input[$i] === "\x3f"
-                && ($input[$i + 1] ?? null) === "\xff"
-                && ($input[$i + 2] ?? null) === "\xff"
-                && ($input[$i + 3] ?? null) === "\xff"
-            ) {
-                return null;
+            $currentByte = $input[$i];
+
+            list($lookup, $chr) = $lookup[$currentByte];
+
+            if ($chr === null) {
+                continue;
             }
 
-            list($lookup, $chr) = $lookup[$input[$i]];
-
-            if ($chr == null) { // Loose type check intentional to match both null and empty string.
-                if ($chr === "") {
-                    return null;
-                }
-
-                continue;
+            if ($chr === "") {
+                return null;
             }
 
             $out[$off++] = $chr[0];
             $bitCount += $lengths[$chr[0]];
+
             if (isset($chr[1])) {
                 $out[$off++] = $chr[1];
                 $bitCount += $lengths[$chr[1]];
