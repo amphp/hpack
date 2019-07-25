@@ -207,7 +207,11 @@ final class HPack
 
         for ($bitCount = $off = $i = 0; $i < $length; $i++) {
             // Fail if EOS symbol is found.
-            if ($input[$i] === "\x3f" && \substr($input, $i, 4) === "\x3f\xff\xff\xff") {
+            if ($input[$i] === "\x3f"
+                && ($input[$i + 1] ?? null) === "\xff"
+                && ($input[$i + 2] ?? null) === "\xff"
+                && ($input[$i + 3] ?? null) === "\xff"
+            ) {
                 return null;
             }
 
