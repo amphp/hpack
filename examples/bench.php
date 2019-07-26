@@ -1,7 +1,5 @@
 <?php
 
-use Amp\Http\HPack;
-
 require __DIR__ . '/../vendor/autoload.php';
 
 $root = __DIR__ . "/../vendor/http2jp/hpack-test-case";
@@ -32,7 +30,7 @@ for ($i = 0; $i < 10; $i++) {
 
     foreach ($tests as $test) {
         $hpack = new Amp\Http\HPack;
-        foreach ($cases as [$input, $output]) {
+        foreach ($cases as list($input, $output)) {
             $hpack->decode($input, 8192);
         }
     }
