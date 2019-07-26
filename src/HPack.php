@@ -420,9 +420,10 @@ final class HPack
      *
      * @param int|null $size
      */
-    public function resizeTable(int $size = null) /* : void */
+    private function resizeTable(int $size = null) /* : void */
     {
         if ($size !== null) {
+            \assert($size <= $this->hardMaxSize);
             $this->currentMaxSize = \min($size, $this->hardMaxSize);
         }
 
