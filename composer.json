@@ -26,12 +26,12 @@
         }
     ],
     "require": {
-        "php": ">=7"
+        "php": ">=7.1"
     },
     "require-dev": {
         "amphp/php-cs-fixer-config": "dev-master",
         "http2jp/hpack-test-case": "^1",
-        "phpunit/phpunit": "^6"
+        "phpunit/phpunit": "^6 | ^7"
     },
     "autoload": {
         "psr-4": {
@@ -40,12 +40,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Amp\\Http\\HPack\\Test\\": "test"
-        }
-    },
-    "config": {
-        "platform": {
-            "php": "7.0.13"
+            "Amp\\Http\\": "test"
         }
     },
     "repositories": [
