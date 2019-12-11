@@ -1,31 +1,34 @@
 <?php
 
-namespace Amp\Http\HPack\Test;
+namespace Amp\Http;
 
-use Amp\Http\HPack;
 use PHPUnit\Framework\TestCase;
 
 /** @group hpack */
-class HPackTest extends TestCase
+abstract class HPackTest extends TestCase
 {
-    const MAX_LENGTH = 8192;
+    private const MAX_LENGTH = 8192;
 
     /**
      * @dataProvider provideDecodeCases
+     *
+     * @param iterable $cases
      */
-    public function testDecode($cases)
+    public function testDecode(iterable $cases): void
     {
-        $hpack = new HPack;
-        foreach ($cases as $i => list($input, $output)) {
+        $hpack = $this->createInstance();
+
+        foreach ($cases as $i => [$input, $output]) {
             $result = $hpack->decode($input, self::MAX_LENGTH);
-            $this->assertEquals($output, $result, "Failure on testcase #$i");
+            $this->assertEquals($output, $result, "Failure on test case #$i");
         }
     }
 
-    public function provideDecodeCases()
+    public function provideDecodeCases(): \Generator
     {
-        $root = __DIR__."/../vendor/http2jp/hpack-test-case";
+        $root = __DIR__ . "/../vendor/http2jp/hpack-test-case";
         $paths = \glob("$root/*/*.json");
+
         foreach ($paths as $path) {
             if (\basename(\dirname($path)) === "raw-data") {
                 continue;
@@ -33,63 +36,79 @@ class HPackTest extends TestCase
 
             $data = \json_decode(\file_get_contents($path));
             $cases = [];
+
             foreach ($data->cases as $case) {
                 foreach ($case->headers as &$header) {
                     $header = (array) $header;
                     $header = [\key($header), \current($header)];
                 }
+
                 $cases[$case->seqno] = [\hex2bin($case->wire), $case->headers];
             }
-            yield \basename($path).": $data->description" => [$cases];
+
+            yield \basename($path) . ": $data->description" => [$cases];
         }
     }
 
     /**
-     * @depends testDecode
+     * @depends      testDecode
      * @dataProvider provideEncodeCases
      */
-    public function testEncode($cases)
+    public function testEncode($cases): void
     {
-        foreach ($cases as $i => list($input, $output)) {
-            $hpack = new HPack;
+        foreach ($cases as $i => [$input, $output]) {
+            $hpack = $this->createInstance();
+
             $encoded = $hpack->encode($input);
             $decoded = $hpack->decode($encoded, self::MAX_LENGTH);
+
             \sort($output);
             \sort($decoded);
-            $this->assertEquals($output, $decoded, "Failure on testcase #$i (standalone)");
+
+            $this->assertEquals($output, $decoded, "Failure on test case #$i (standalone)");
         }
 
         // Ensure that usage of dynamic table works as expected
-        $encHpack = new HPack;
-        $decHpack = new HPack;
-        foreach ($cases as $i => list($input, $output)) {
+        $encHpack = $this->createInstance();
+        $decHpack = $this->createInstance();
+
+        foreach ($cases as $i => [$input, $output]) {
             $encoded = $encHpack->encode($input);
             $decoded = $decHpack->decode($encoded, self::MAX_LENGTH);
+
             \sort($output);
             \sort($decoded);
-            $this->assertEquals($output, $decoded, "Failure on testcase #$i (shared context)");
+
+            $this->assertEquals($output, $decoded, "Failure on test case #$i (shared context)");
         }
     }
 
-    public function provideEncodeCases()
+    public function provideEncodeCases(): \Generator
     {
-        $root = __DIR__."/../vendor/http2jp/hpack-test-case";
+        $root = __DIR__ . "/../vendor/http2jp/hpack-test-case";
         $paths = \glob("$root/raw-data/*.json");
+
         foreach ($paths as $path) {
             $data = \json_decode(\file_get_contents($path));
             $cases = [];
             $i = 0;
+
             foreach ($data->cases as $case) {
                 $headers = [];
+
                 foreach ($case->headers as &$header) {
                     $header = (array) $header;
                     $header = [\key($header), \current($header)];
-                    $headers[$header[0]][] = $header[1];
+                    $headers[] = $header;
                 }
+
                 $cases[$case->seqno ?? $i] = [$headers, $case->headers];
                 $i++;
             }
+
             yield \basename($path) . (isset($data->description) ? ": $data->description" : "") => [$cases];
         }
     }
+
+    abstract protected function createInstance();
 }
