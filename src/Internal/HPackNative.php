@@ -117,25 +117,29 @@ final class HPackNative
     // (micro-)optimized decode
     private static function huffmanLookupInit(): array
     {
+        if (('cli' !== \PHP_SAPI && 'phpdbg' !== \PHP_SAPI) || \filter_var(\ini_get('opcache.enable_cli'), \FILTER_VALIDATE_BOOLEAN)) {
+            return require __DIR__ . '/huffman-lookup.php';
+        }
+
         \gc_disable();
         $encodingAccess = [];
         $terminals = [];
+        $index = 7;
 
         foreach (self::HUFFMAN_CODE as $chr => $bits) {
             $len = self::HUFFMAN_CODE_LENGTHS[$chr];
 
             for ($bit = 0; $bit < 8; $bit++) {
                 $offlen = $len + $bit;
-                $next = &$encodingAccess[$bit];
+                $next = $bit;
 
                 for ($byte = ($offlen - 1) >> 3; $byte > 0; $byte--) {
                     $cur = \str_pad(\decbin(($bits >> ($byte * 8 - ((0x30 - $offlen) & 7))) & 0xFF), 8, "0", STR_PAD_LEFT);
-                    if (isset($next[$cur]) && $next[$cur][0] !== $encodingAccess[0]) {
-                        $next = &$next[$cur][0];
+                    if (($encodingAccess[$next][$cur][0] ?? 0) !== 0) {
+                        $next = $encodingAccess[$next][$cur][0];
                     } else {
-                        $tmp = &$next;
-                        unset($next);
-                        $tmp[$cur] = [&$next, null];
+                        $encodingAccess[$next][$cur] = [++$index, null];
+                        $next = $index;
                     }
                 }
 
@@ -145,53 +149,47 @@ final class HPackNative
                     "0",
                     STR_PAD_LEFT
                 );
-                $next[$key] = [null, $chr > 0xFF ? "" : \chr($chr)];
+                $encodingAccess[$next][$key] = [null, $chr > 0xFF ? "" : \chr($chr)];
 
                 if ($offlen & 7) {
-                    $terminals[$offlen & 7][] = [$key, &$next];
+                    $terminals[$offlen & 7][] = [$key, $next];
                 } else {
-                    $next[$key][0] = &$encodingAccess[0];
+                    $encodingAccess[$next][$key][0] = 0;
                 }
             }
         }
 
         $memoize = [];
         for ($off = 7; $off > 0; $off--) {
-            foreach ($terminals[$off] as &$terminal) {
-                $key = $terminal[0];
-                $next = &$terminal[1];
-
-                if ($next[$key][0] === null) {
-                    foreach ($encodingAccess[$off] as $chr => &$cur) {
-                        $next[($memoize[$key] ?? $memoize[$key] = \str_pad($key, 8, "0", STR_PAD_RIGHT)) | $chr] =
-                            [&$cur[0], $next[$key][1] != "" ? $next[$key][1] . $cur[1] : ""];
+            foreach ($terminals[$off] as [$key, $next]) {
+                if ($encodingAccess[$next][$key][0] === null) {
+                    foreach ($encodingAccess[$off] as $chr => $cur) {
+                        $encodingAccess[$next][($memoize[$key] ?? $memoize[$key] = \str_pad($key, 8, "0", STR_PAD_RIGHT)) | $chr] =
+                            [$cur[0], $encodingAccess[$next][$key][1] != "" ? $encodingAccess[$next][$key][1] . $cur[1] : ""];
                     }
 
-                    unset($next[$key], $cur);
+                    unset($encodingAccess[$next][$key]);
                 }
             }
-
-            unset($terminal);
         }
 
         $memoize = [];
         for ($off = 7; $off > 0; $off--) {
-            foreach ($terminals[$off] as &$terminal) {
-                $next = &$terminal[1];
-                foreach ($next as $k => $v) {
+            foreach ($terminals[$off] as [$key, $next]) {
+                foreach ($encodingAccess[$next] as $k => $v) {
                     if (\strlen($k) !== 1) {
-                        $next[$memoize[$k] ?? $memoize[$k] = \chr(\bindec($k))] = $v;
-                        unset($next[$k]);
+                        $encodingAccess[$next][$memoize[$k] ?? $memoize[$k] = \chr(\bindec($k))] = $v;
+                        unset($encodingAccess[$next][$k]);
                     }
                 }
             }
+
+            unset($encodingAccess[$off]);
         }
 
-        unset($tmp, $cur, $next, $terminals, $terminal);
         \gc_enable();
-        \gc_collect_cycles();
 
-        return $encodingAccess[0];
+        return $encodingAccess;
     }
 
     /**
@@ -201,7 +199,8 @@ final class HPackNative
      */
     public static function huffmanDecode(string $input) /* : ?string */
     {
-        $lookup = self::$huffmanLookup;
+        $huffmanLookup = self::$huffmanLookup;
+        $lookup = 0;
         $lengths = self::$huffmanLengths;
         $length = \strlen($input);
         $out = \str_repeat("\0", $length / 5 * 8 + 1); // max length
@@ -212,9 +211,7 @@ final class HPackNative
         }
 
         for ($bitCount = $off = $i = 0; $i < $length; $i++) {
-            $currentByte = $input[$i];
-
-            [$lookup, $chr] = $lookup[$currentByte];
+            [$lookup, $chr] = $huffmanLookup[$lookup][$input[$i]];
 
             if ($chr === null) {
                 continue;
@@ -251,6 +248,10 @@ final class HPackNative
 
     private static function huffmanCodesInit(): array
     {
+        if (('cli' !== \PHP_SAPI && 'phpdbg' !== \PHP_SAPI) || \filter_var(\ini_get('opcache.enable_cli'), \FILTER_VALIDATE_BOOLEAN)) {
+            return require __DIR__ . '/huffman-codes.php';
+        }
+
         $lookup = [];
 
         for ($chr = 0; $chr <= 0xFF; $chr++) {
@@ -259,14 +260,17 @@ final class HPackNative
 
             for ($bit = 0; $bit < 8; $bit++) {
                 $bytes = ($length + $bit - 1) >> 3;
+                $codes = [];
 
                 for ($byte = $bytes; $byte >= 0; $byte--) {
-                    $lookup[$bit][\chr($chr)][] = \chr(
+                    $codes[] = \chr(
                         $byte
                             ? $bits >> ($length - ($bytes - $byte + 1) * 8 + $bit)
                             : ($bits << ((0x30 - $length - $bit) & 7))
                     );
                 }
+
+                $lookup[$bit][\chr($chr)] = $codes;
             }
         }
 
@@ -379,7 +383,7 @@ final class HPackNative
         ["www-authenticate", ""]
     ];
 
-    private static function decodeDynamicInteger(string &$input, int &$off): int
+    private static function decodeDynamicInteger(string $input, int &$off): int
     {
         $c = \ord($input[$off++]);
         $int = $c & 0x7f;

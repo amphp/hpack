@@ -15,6 +15,10 @@
     <filter>
         <whitelist>
             <directory suffix=".php">src</directory>
+            <exclude>
+                <file>src/Internal/huffman-codes.php</file>
+                <file>src/Internal/huffman-lookup.php</file>
+            </exclude>
         </whitelist>
     </filter>
     <logging>
