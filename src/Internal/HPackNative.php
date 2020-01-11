@@ -504,7 +504,7 @@ final class HPackNative
 
                         if ($index <= self::LAST_INDEX) {
                             $header = self::TABLE[$index - 1];
-                        } else if (!isset($this->headers[$index - 1 - self::LAST_INDEX])) {
+                        } elseif (!isset($this->headers[$index - 1 - self::LAST_INDEX])) {
                             return null;
                         } else {
                             $header = $this->headers[$index - 1 - self::LAST_INDEX];
