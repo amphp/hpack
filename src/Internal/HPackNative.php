@@ -2,6 +2,8 @@
 
 namespace Amp\Http\Internal;
 
+use Amp\Http\HPackException;
+
 /** @internal */
 final class HPackNative
 {
@@ -381,6 +383,10 @@ final class HPackNative
 
     private static function decodeDynamicInteger(string &$input, int &$off): int
     {
+        if (!isset($input[$off])) {
+            throw new HPackException('Invalid input data, too short for dynamic integer');
+        }
+
         $c = \ord($input[$off++]);
         $int = $c & 0x7f;
         $i = 0;
@@ -424,7 +430,7 @@ final class HPackNative
     public function resizeTable(int $size = null) /* : void */
     {
         if ($size !== null) {
-            $this->currentMaxSize = \min($size, $this->hardMaxSize);
+            $this->currentMaxSize = \max(0, \min($size, $this->hardMaxSize));
         }
 
         while ($this->size > $this->currentMaxSize) {
@@ -446,53 +452,88 @@ final class HPackNative
         $inputLength = \strlen($input);
         $size = 0;
 
-        // dynamic $table as per 2.3.2
-        while ($off < $inputLength) {
-            $index = \ord($input[$off++]);
+        try {
+            // dynamic $table as per 2.3.2
+            while ($off < $inputLength) {
+                $index = \ord($input[$off++]);
 
-            if ($index & 0x80) {
-                // range check
-                if ($index <= self::LAST_INDEX + 0x80) {
-                    if ($index === 0x80) {
-                        return null;
+                if ($index & 0x80) {
+                    // range check
+                    if ($index <= self::LAST_INDEX + 0x80) {
+                        if ($index === 0x80) {
+                            return null;
+                        }
+
+                        [$name, $value] = $headers[] = self::TABLE[$index - 0x81];
+                    } else {
+                        if ($index == 0xff) {
+                            $index = self::decodeDynamicInteger($input, $off) + 0xff;
+                        }
+
+                        $index -= 0x81 + self::LAST_INDEX;
+                        if (!isset($this->headers[$index])) {
+                            return null;
+                        }
+
+                        [$name, $value] = $headers[] = $this->headers[$index];
                     }
+                } elseif (($index & 0x60) !== 0x20) { // (($index & 0x40) || !($index & 0x20)): bit 4: never index is ignored
+                    $dynamic = (bool) ($index & 0x40);
 
-                    [$name, $value] = $headers[] = self::TABLE[$index - 0x81];
-                } else {
-                    if ($index == 0xff) {
-                        $index = self::decodeDynamicInteger($input, $off) + 0xff;
-                    }
-
-                    $index -= 0x81 + self::LAST_INDEX;
-                    if (!isset($this->headers[$index])) {
-                        return null;
-                    }
-
-                    [$name, $value] = $headers[] = $this->headers[$index];
-                }
-            } elseif (($index & 0x60) !== 0x20) { // (($index & 0x40) || !($index & 0x20)): bit 4: never index is ignored
-                $dynamic = (bool) ($index & 0x40);
-
-                if ($index & ($dynamic ? 0x3f : 0x0f)) { // separate length
-                    if ($dynamic) {
-                        if ($index === 0x7f) {
-                            $index = self::decodeDynamicInteger($input, $off) + 0x3f;
+                    if ($index & ($dynamic ? 0x3f : 0x0f)) { // separate length
+                        if ($dynamic) {
+                            if ($index === 0x7f) {
+                                $index = self::decodeDynamicInteger($input, $off) + 0x3f;
+                            } else {
+                                $index &= 0x3f;
+                            }
                         } else {
-                            $index &= 0x3f;
+                            $index &= 0x0f;
+                            if ($index === 0x0f) {
+                                $index = self::decodeDynamicInteger($input, $off) + 0x0f;
+                            }
+                        }
+
+                        if ($index < 0) {
+                            return null;
+                        }
+
+                        if ($index <= self::LAST_INDEX) {
+                            $header = self::TABLE[$index - 1];
+                        } else if (!isset($this->headers[$index - 1 - self::LAST_INDEX])) {
+                            return null;
+                        } else {
+                            $header = $this->headers[$index - 1 - self::LAST_INDEX];
                         }
                     } else {
-                        $index &= 0x0f;
-                        if ($index === 0x0f) {
-                            $index = self::decodeDynamicInteger($input, $off) + 0x0f;
+                        if ($off >= $inputLength) {
+                            return null;
                         }
+
+                        $length = \ord($input[$off++]);
+                        $huffman = $length & 0x80;
+                        $length &= 0x7f;
+
+                        if ($length === 0x7f) {
+                            $length = self::decodeDynamicInteger($input, $off) + 0x7f;
+                        }
+
+                        if ($inputLength - $off < $length || $length <= 0) {
+                            return null;
+                        }
+
+                        if ($huffman) {
+                            $header = [self::huffmanDecode(\substr($input, $off, $length))];
+                            if ($header[0] === null) {
+                                return null;
+                            }
+                        } else {
+                            $header = [\substr($input, $off, $length)];
+                        }
+
+                        $off += $length;
                     }
 
-                    if ($index <= self::LAST_INDEX) {
-                        $header = self::TABLE[$index - 1];
-                    } else {
-                        $header = $this->headers[$index - 1 - self::LAST_INDEX];
-                    }
-                } else {
                     if ($off >= $inputLength) {
                         return null;
                     }
@@ -505,82 +546,57 @@ final class HPackNative
                         $length = self::decodeDynamicInteger($input, $off) + 0x7f;
                     }
 
-                    if ($inputLength - $off < $length || $length <= 0) {
+                    if ($inputLength - $off < $length || $length < 0) {
                         return null;
                     }
 
                     if ($huffman) {
-                        $header = [self::huffmanDecode(\substr($input, $off, $length))];
-                        if ($header[0] === null) {
+                        $header[1] = self::huffmanDecode(\substr($input, $off, $length));
+                        if ($header[1] === null) {
                             return null;
                         }
                     } else {
-                        $header = [\substr($input, $off, $length)];
+                        $header[1] = \substr($input, $off, $length);
                     }
 
                     $off += $length;
-                }
 
-                if ($off >= $inputLength) {
-                    return null;
-                }
+                    if ($dynamic) {
+                        \array_unshift($this->headers, $header);
+                        $this->size += 32 + \strlen($header[0]) + \strlen($header[1]);
+                        if ($this->currentMaxSize < $this->size) {
+                            $this->resizeTable();
+                        }
+                    }
 
-                $length = \ord($input[$off++]);
-                $huffman = $length & 0x80;
-                $length &= 0x7f;
+                    [$name, $value] = $headers[] = $header;
+                } else { // if ($index & 0x20) {
+                    if ($off >= $inputLength) {
+                        return null; // Dynamic table size update must not be the last entry in header block.
+                    }
 
-                if ($length === 0x7f) {
-                    $length = self::decodeDynamicInteger($input, $off) + 0x7f;
-                }
+                    $index &= 0x1f;
+                    if ($index === 0x1f) {
+                        $index = self::decodeDynamicInteger($input, $off) + 0x1f;
+                    }
 
-                if ($inputLength - $off < $length || $length < 0) {
-                    return null;
-                }
-
-                if ($huffman) {
-                    $header[1] = self::huffmanDecode(\substr($input, $off, $length));
-                    if ($header[1] === null) {
+                    if ($index > $this->hardMaxSize) {
                         return null;
                     }
-                } else {
-                    $header[1] = \substr($input, $off, $length);
+
+                    $this->resizeTable($index);
+
+                    continue;
                 }
 
-                $off += $length;
+                $size += \strlen($name) + \strlen($value);
 
-                if ($dynamic) {
-                    \array_unshift($this->headers, $header);
-                    $this->size += 32 + \strlen($header[0]) + \strlen($header[1]);
-                    if ($this->currentMaxSize < $this->size) {
-                        $this->resizeTable();
-                    }
-                }
-
-                [$name, $value] = $headers[] = $header;
-            } else { // if ($index & 0x20) {
-                if ($off >= $inputLength) {
-                    return null; // Dynamic table size update must not be the last entry in header block.
-                }
-
-                $index &= 0x1f;
-                if ($index === 0x1f) {
-                    $index = self::decodeDynamicInteger($input, $off) + 0x1f;
-                }
-
-                if ($index > $this->hardMaxSize) {
+                if ($size > $maxSize) {
                     return null;
                 }
-
-                $this->resizeTable($index);
-
-                continue;
             }
-
-            $size += \strlen($name) + \strlen($value);
-
-            if ($size > $maxSize) {
-                return null;
-            }
+        } catch (HPackException $e) {
+            return null;
         }
 
         return $headers;
