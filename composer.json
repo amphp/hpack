@@ -43,6 +43,11 @@
             "Amp\\Http\\": "test"
         }
     },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "3.x-dev"
+        }
+    },
     "repositories": [
         {
             "type": "package",
