@@ -63,7 +63,7 @@ final class HPackNghttp2
 
     private static function init(): void
     {
-        if (self::$ffi) {
+        if (self::$ffi !== null) {
             return;
         }
 
