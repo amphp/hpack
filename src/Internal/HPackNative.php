@@ -205,7 +205,7 @@ final class HPackNative
         $lookup = 0;
         $lengths = self::$huffmanLengths;
         $length = \strlen($input);
-        $out = \str_repeat("\0", $length / 5 * 8 + 1); // max length
+        $out = \str_repeat("\0", (int) \floor($length / 5 * 8 + 1)); // max length
 
         // Fail if EOS symbol is found.
         if (\strpos($input, "\x3f\xff\xff\xff") !== false) {
