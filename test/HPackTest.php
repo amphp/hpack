@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Amp\Http;
 
@@ -12,7 +12,6 @@ abstract class HPackTest extends TestCase
     /**
      * @dataProvider provideDecodeCases
      *
-     * @param iterable $cases
      */
     public function testDecode(iterable $cases): void
     {
@@ -106,7 +105,9 @@ abstract class HPackTest extends TestCase
                 $i++;
             }
 
-            yield \basename($path) . (isset($data->description) ? ": $data->description" : "") => [$cases];
+            $description = $data->description ?? "no description";
+
+            yield "$path: $description" => [$cases];
         }
     }
 

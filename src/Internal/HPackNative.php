@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Amp\Http\Internal;
 
@@ -179,8 +179,8 @@ final class HPackNative
         for ($off = 7; $off > 0; $off--) {
             foreach ($terminals[$off] as [$key, $next]) {
                 foreach ($encodingAccess[$next] as $k => $v) {
-                    if (\strlen($k) !== 1) {
-                        $encodingAccess[$next][$memoize[$k] ?? $memoize[$k] = \chr(\bindec($k))] = $v;
+                    if (\strlen((string) $k) !== 1) {
+                        $encodingAccess[$next][$memoize[$k] ?? $memoize[$k] = \chr(\bindec((string) $k))] = $v;
                         unset($encodingAccess[$next][$k]);
                     }
                 }
@@ -195,7 +195,6 @@ final class HPackNative
     }
 
     /**
-     * @param string $input
      *
      * @return string|null Returns null if decoding fails.
      */
@@ -419,7 +418,6 @@ final class HPackNative
      * Sets the upper limit on table size. Dynamic table updates requesting a size above this size will result in a
      * decoding error (i.e., returning null from decode()).
      *
-     * @param int $maxSize
      */
     public function setTableSizeLimit(int $maxSize) /* : void */
     {
@@ -429,7 +427,6 @@ final class HPackNative
     /**
      * Resizes the table to the given size, removing old entries as per section 4.4 if necessary.
      *
-     * @param int|null $size
      */
     public function resizeTable(int $size = null) /* : void */
     {
@@ -619,7 +616,6 @@ final class HPackNative
      * @param string[][] $headers
      * @param int $compressionThreshold Compress strings whose length is at least the number of bytes given.
      *
-     * @return string
      */
     public function encode(array $headers, int $compressionThreshold = self::DEFAULT_COMPRESSION_THRESHOLD): string
     {
