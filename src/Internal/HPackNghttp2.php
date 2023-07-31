@@ -86,9 +86,12 @@ final class HPackNghttp2
         self::$decodeFlagsPtr = FFI::addr(self::$decodeFlags);
     }
 
-    private static function createBufferFromString(string $value)
+    private static function createBufferFromString(string $value): ?FFI\CData
     {
         $length = \strlen($value);
+        if (!$length) {
+            return null;
+        }
 
         $buffer = FFI::new(FFI::arrayType(self::$uint8Type, [$length]));
         FFI::memcpy($buffer, $value, $length);
@@ -139,6 +142,9 @@ final class HPackNghttp2
 
         $bufferLength = \strlen($input);
         $buffer = self::createBufferFromString($input);
+        if (!$buffer) {
+            return [];
+        }
 
         $offset = 0;
         $bufferPtr = FFI::cast(self::$uint8PtrType, $buffer);
