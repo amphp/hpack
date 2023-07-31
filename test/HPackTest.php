@@ -46,7 +46,7 @@ abstract class HPackTest extends TestCase
                 $cases[$case->seqno] = [\hex2bin($case->wire), $case->headers];
             }
 
-            yield \basename($path) . ": $data->description" => [$cases];
+            yield "$path: $data->description" => [$cases];
         }
     }
 

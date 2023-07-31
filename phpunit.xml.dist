@@ -1,28 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/8.0/phpunit.xsd"
-         bootstrap="vendor/autoload.php" colors="true">
-    <php>
-        <!-- Needed because @dataProvider uses iterator_to_array() -->
-        <ini name="memory_limit" value="1G"/>
-        <ini name="error_reporting" value="-1"/>
-    </php>
-    <testsuites>
-        <testsuite name="Amp HPack Test">
-            <directory>test</directory>
-        </testsuite>
-    </testsuites>
-    <filter>
-        <whitelist>
-            <directory suffix=".php">src</directory>
-            <exclude>
-                <file>src/Internal/huffman-codes.php</file>
-                <file>src/Internal/huffman-lookup.php</file>
-            </exclude>
-        </whitelist>
-    </filter>
-    <logging>
-        <log type="coverage-html" target="build/coverage"/>
-        <log type="coverage-clover" target="build/logs/clover.xml"/>
-    </logging>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.3/phpunit.xsd" bootstrap="vendor/autoload.php" colors="true">
+  <coverage>
+    <include>
+      <directory suffix=".php">src</directory>
+    </include>
+    <exclude>
+      <file>src/Internal/huffman-codes.php</file>
+      <file>src/Internal/huffman-lookup.php</file>
+    </exclude>
+    <report>
+      <clover outputFile="build/logs/clover.xml"/>
+      <html outputDirectory="build/coverage"/>
+    </report>
+  </coverage>
+  <php>
+    <!-- Needed because @dataProvider uses iterator_to_array() -->
+    <ini name="memory_limit" value="2G"/>
+    <ini name="error_reporting" value="-1"/>
+  </php>
+  <testsuites>
+    <testsuite name="Amp HPack Test">
+      <directory>test</directory>
+    </testsuite>
+  </testsuites>
+  <logging/>
 </phpunit>
