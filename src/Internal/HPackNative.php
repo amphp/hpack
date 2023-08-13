@@ -2,9 +2,13 @@
 
 namespace Amp\Http\Internal;
 
+use Amp\Http\HPack;
 use Amp\Http\HPackException;
 
-/** @internal */
+/**
+ * @internal
+ * @psalm-import-type HeaderArray from HPack
+ */
 final class HPackNative
 {
     private const HUFFMAN_CODE = [
@@ -613,7 +617,7 @@ final class HPackNative
     }
 
     /**
-     * @param string[][] $headers
+     * @param HeaderArray $headers
      * @param int $compressionThreshold Compress strings whose length is at least the number of bytes given.
      *
      */
@@ -623,6 +627,9 @@ final class HPackNative
         $output = "";
 
         foreach ($headers as [$name, $value]) {
+            $name = (string) $name;
+            $value = (string) $value;
+
             if (isset(self::$indexMap[$name])) {
                 $index = self::$indexMap[$name];
                 if ($index < 0x10) {

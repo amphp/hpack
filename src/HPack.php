@@ -5,6 +5,9 @@ namespace Amp\Http;
 use Amp\Http\Internal\HPackNative;
 use Amp\Http\Internal\HPackNghttp2;
 
+/**
+ * @psalm-type HeaderArray = array<array{string, string}>
+ */
 final class HPack
 {
     /** @var HPackNative|HPackNghttp2 */
@@ -31,7 +34,7 @@ final class HPack
     }
 
     /**
-     * @param array $headers Headers to encode.
+     * @param HeaderArray $headers Headers to encode.
      *
      * @return string Encoded headers.
      *

@@ -2,10 +2,14 @@
 
 namespace Amp\Http\Internal;
 
+use Amp\Http\HPack;
 use Amp\Http\HPackException;
 use FFI;
 
-/** @internal */
+/**
+ * @internal
+ * @psalm-import-type HeaderArray from HPack
+ */
 final class HPackNghttp2
 {
     private const FLAG_NO_INDEX = 0x01;
@@ -195,7 +199,7 @@ final class HPackNghttp2
     }
 
     /**
-     * @param string[][] $headers
+     * @param HeaderArray $headers
      *
      * @return string Encoded headers.
      */
@@ -213,6 +217,9 @@ final class HPackNghttp2
 
         foreach ($headers as $index => [$name, $value]) {
             \assert($index === $current);
+
+            $name = (string) $name;
+            $value = (string) $value;
 
             $pair = $pairs[$current];
 

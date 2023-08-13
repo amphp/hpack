@@ -2,6 +2,8 @@
 
 namespace Amp\Http;
 
+use Amp\Http\Internal\HPackNative;
+use Amp\Http\Internal\HPackNghttp2;
 use PHPUnit\Framework\TestCase;
 
 /** @group hpack */
@@ -111,5 +113,30 @@ abstract class HPackTest extends TestCase
         }
     }
 
+    public function testEncodeWithNonStrings(): void
+    {
+        $hpack = $this->createInstance();
+
+        $stringable = new class() {
+            public function __toString()
+            {
+                return 'value';
+            }
+        };
+
+        $encoded = $hpack->encode([
+            ['x-integer', 42],
+            ['x-float', 3.14159],
+            ['x-boolean', true],
+            ['x-stringable', $stringable],
+            [42, 'value'],
+        ]);
+
+        self::assertNotEmpty($encoded);
+    }
+
+    /**
+     * @return HPackNative|HPackNghttp2
+     */
     abstract protected function createInstance();
 }
