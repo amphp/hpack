@@ -97,7 +97,7 @@ final class HPackNghttp2
             return null;
         }
 
-        $buffer = FFI::new(FFI::arrayType(self::$uint8Type, [$length]));
+        $buffer = self::$ffi->new(FFI::arrayType(self::$uint8Type, [$length]));
         FFI::memcpy($buffer, $value, $length);
 
         return $buffer;
@@ -151,7 +151,7 @@ final class HPackNghttp2
         }
 
         $offset = 0;
-        $bufferPtr = FFI::cast(self::$uint8PtrType, $buffer);
+        $bufferPtr = $ffi->cast(self::$uint8PtrType, $buffer);
 
         $headers = [];
 
@@ -226,10 +226,10 @@ final class HPackNghttp2
             $nameBuffer = self::createBufferFromString($name);
             $valueBuffer = self::createBufferFromString($value);
 
-            $pair->name = FFI::cast(self::$uint8PtrType, $nameBuffer);
+            $pair->name = $ffi->cast(self::$uint8PtrType, $nameBuffer);
             $pair->namelen = \strlen($name);
 
-            $pair->value = FFI::cast(self::$uint8PtrType, $valueBuffer);
+            $pair->value = $ffi->cast(self::$uint8PtrType, $valueBuffer);
             $pair->valuelen = \strlen($value);
 
             $pair->flags = self::SENSITIVE_HEADERS[$name] ?? self::FLAG_NO_COPY;
@@ -241,7 +241,7 @@ final class HPackNghttp2
         }
 
         $bufferLength = $ffi->nghttp2_hd_deflate_bound($this->deflatePtr, $pairs, $headerCount);
-        $buffer = FFI::new(FFI::arrayType(self::$uint8Type, [$bufferLength]));
+        $buffer = $ffi->new(FFI::arrayType(self::$uint8Type, [$bufferLength]));
 
         $bufferLength = $ffi->nghttp2_hd_deflate_hd($this->deflatePtr, $buffer, $bufferLength, $pairs, $headerCount);
 
