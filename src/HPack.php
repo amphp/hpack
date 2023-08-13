@@ -6,7 +6,7 @@ use Amp\Http\Internal\HPackNative;
 use Amp\Http\Internal\HPackNghttp2;
 
 /**
- * @psalm-type HeaderArray = array<array{string, string}>
+ * @psalm-type HeaderArray = list<array{string, string}>
  */
 final class HPack
 {
