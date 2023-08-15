@@ -5,3 +5,5 @@ composer.lock
 coverage
 phpunit.xml
 vendor
+fuzz
+php-fuzzer.phar
