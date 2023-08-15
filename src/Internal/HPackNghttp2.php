@@ -146,7 +146,7 @@ final class HPackNghttp2
 
         $bufferLength = \strlen($input);
         $buffer = self::createBufferFromString($input);
-        if ($buffer !== null) {
+        if ($buffer === null) {
             return [];
         }
 
