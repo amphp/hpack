@@ -405,6 +405,10 @@ final class HPackNative
 
             $c = \ord($input[$off++]);
             $int += ($c & 0x7f) << (++$i * 7);
+
+            if ($int > 2147483647) {
+                throw new HPackException('Invalid integer, too large');
+            }
         }
 
         return $int;
