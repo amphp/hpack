@@ -87,6 +87,7 @@ jobs:
           max_attempts: 5
           retry_wait_seconds: 30
           command: |
+            composer remove --dev --no-update nikic/php-fuzzer
             composer update --optimize-autoloader --no-interaction --no-progress ${{ matrix.composer-flags }}
             composer info -D
 
