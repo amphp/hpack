@@ -372,7 +372,7 @@ final class HPackNative
         ["link", ""],
         ["location", ""],
         ["max-forwards", ""],
-        ["proxy-authentication", ""],
+        ["proxy-authenticate", ""],
         ["proxy-authorization", ""],
         ["range", ""],
         ["referer", ""],
