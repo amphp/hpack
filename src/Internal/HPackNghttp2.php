@@ -69,10 +69,20 @@ final class HPackNghttp2
 
         $header = \file_get_contents(__DIR__ . '/amp-hpack.h');
 
-        try {
-            self::$ffi = FFI::cdef($header, 'libnghttp2.so');
-        } catch (\Throwable $exception) {
-            self::$ffi = FFI::cdef($header, 'libnghttp2.dylib');
+        $files = ['libnghttp2.so.14', 'libnghttp2.so', 'libnghttp2.dylib'];
+        $error = null;
+
+        foreach ($files as $file) {
+            try {
+                self::$ffi = FFI::cdef($header, $file);
+                $error = null;
+            } catch (\Throwable $exception) {
+                $error = $error ?? $exception;
+            }
+        }
+
+        if ($error) {
+            throw $error;
         }
 
         self::$deflatePtrType = self::$ffi->type('nghttp2_hd_deflater*');
@@ -129,7 +139,7 @@ final class HPackNghttp2
 
     /**
      * @param string $input Encoded headers.
-     * @param int    $maxSize Maximum length of the decoded header string.
+     * @param int $maxSize Maximum length of the decoded header string.
      *
      * @return string[][]|null Returns null if decoding fails or if $maxSize is exceeded.
      */
