@@ -76,6 +76,7 @@ final class HPackNghttp2
             try {
                 self::$ffi = FFI::cdef($header, $file);
                 $error = null;
+                break;
             } catch (\Throwable $exception) {
                 $error = $error ?? $exception;
             }
