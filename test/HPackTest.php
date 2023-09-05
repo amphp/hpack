@@ -137,17 +137,16 @@ abstract class HPackTest extends TestCase
 
     public function testEncodeInteger(): void
     {
-        $hpack = $this->createInstance();
-
         for ($i = 1; $i < 1024; $i++) {
+            $hpack = $this->createInstance();
+
             $input = [
                 ['x', \str_repeat('.', $i)],
             ];
 
             $encoded = $hpack->encode($input);
-            $decoder = $this->createInstance();
 
-            self::assertSame($input, $decoder->decode($encoded, 128000), 'Length ' . $i);
+            self::assertSame($input, $hpack->decode($encoded, 128000), 'Length ' . $i);
         }
 
         self::assertNotEmpty($encoded);
