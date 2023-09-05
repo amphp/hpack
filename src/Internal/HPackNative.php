@@ -614,7 +614,7 @@ final class HPackNative
     private static function encodeDynamicInteger(int $int): string
     {
         $out = "";
-        for ($i = 0; ($int >> $i) > 0x80; $i += 7) {
+        for ($i = 0; ($int >> $i) >= 0x80; $i += 7) {
             $out .= \chr(0x80 | (($int >> $i) & 0x7f));
         }
         return $out . \chr($int >> $i);

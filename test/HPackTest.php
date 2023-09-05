@@ -135,6 +135,24 @@ abstract class HPackTest extends TestCase
         self::assertNotEmpty($encoded);
     }
 
+    public function testEncodeInteger(): void
+    {
+        $hpack = $this->createInstance();
+
+        for ($i = 1; $i < 1024; $i++) {
+            $input = [
+                ['x', \str_repeat('.', $i)],
+            ];
+
+            $encoded = $hpack->encode($input);
+            $decoder = $this->createInstance();
+
+            self::assertSame($input, $decoder->decode($encoded, 128000), 'Length ' . $i);
+        }
+
+        self::assertNotEmpty($encoded);
+    }
+
     /**
      * @return HPackNative|HPackNghttp2
      */
