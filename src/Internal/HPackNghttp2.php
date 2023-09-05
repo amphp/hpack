@@ -69,7 +69,7 @@ final class HPackNghttp2
 
         $header = \file_get_contents(__DIR__ . '/amp-hpack.h');
 
-        $files = ['libnghttp2.so.14', 'libnghttp2.so', 'libnghttp2.dylib'];
+        $files = ['libnghttp2.so.14', 'libnghttp2.so', 'libnghttp2.dylib', '/opt/homebrew/lib/libnghttp2.dylib'];
         $error = null;
 
         foreach ($files as $file) {
