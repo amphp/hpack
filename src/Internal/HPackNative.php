@@ -436,7 +436,7 @@ final class HPackNative
      * Resizes the table to the given size, removing old entries as per section 4.4 if necessary.
      *
      */
-    public function resizeTable(int $size = null) /* : void */
+    public function resizeTable(?int $size = null) /* : void */
     {
         if ($size !== null) {
             $this->currentMaxSize = \max(0, \min($size, $this->hardMaxSize));
