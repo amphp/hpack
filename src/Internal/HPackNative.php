@@ -269,9 +269,11 @@ final class HPackNative
 
                 for ($byte = $bytes; $byte >= 0; $byte--) {
                     $codes[] = \chr(
-                        $byte
-                            ? $bits >> ($length - ($bytes - $byte + 1) * 8 + $bit)
-                            : ($bits << ((0x30 - $length - $bit) & 7))
+                        (
+                            $byte
+                                ? $bits >> ($length - ($bytes - $byte + 1) * 8 + $bit)
+                                : ($bits << ((0x30 - $length - $bit) & 7))
+                        ) & 0xFF
                     );
                 }
 
