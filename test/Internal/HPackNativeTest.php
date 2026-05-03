@@ -17,7 +17,7 @@ class HPackNativeTest extends HPackTest
 
         \set_error_handler(
             static function (int $errno, string $errstr) use (&$deprecations): bool {
-                $deprecations[] = $errstr;
+                $deprecations[$errstr] = true;
                 return true;
             },
             \E_DEPRECATED
@@ -64,6 +64,9 @@ class HPackNativeTest extends HPackTest
             \restore_error_handler();
         }
 
-        self::assertEmpty($deprecations, 'chr() deprecation triggered: ' . \implode(', ', $deprecations));
+        self::assertEmpty(
+            $deprecations,
+            'chr() deprecation triggered: ' . \implode(', ', \array_keys($deprecations))
+        );
     }
 }
