@@ -21,6 +21,7 @@
   <testsuites>
     <testsuite name="Amp HPack Test">
       <directory>test</directory>
+      <directory suffix=".phpt">test/phpt</directory>
     </testsuite>
   </testsuites>
   <logging/>

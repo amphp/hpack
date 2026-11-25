@@ -141,8 +141,33 @@ final class HPackNghttp2
 
     public function __destruct()
     {
-        self::$ffi->nghttp2_hd_inflate_del($this->inflatePtr);
-        self::$ffi->nghttp2_hd_deflate_del($this->deflatePtr);
+        if ($this->inflatePtr !== null) {
+            self::$ffi->nghttp2_hd_inflate_del($this->inflatePtr);
+            $this->inflatePtr = null;
+        }
+
+        if ($this->deflatePtr !== null) {
+            self::$ffi->nghttp2_hd_deflate_del($this->deflatePtr);
+            $this->deflatePtr = null;
+        }
+    }
+
+    /**
+     * Private rather than throwing: a throwing __clone() still destructs the partially created clone,
+     * which would free the shared nghttp2 pointers twice.
+     */
+    private function __clone()
+    {
+    }
+
+    public function __sleep()
+    {
+        throw new \Error('Serialization of class ' . self::class . ' is not allowed');
+    }
+
+    public function __wakeup()
+    {
+        throw new \Error('Unserialization of class ' . self::class . ' is not allowed');
     }
 
     /**
