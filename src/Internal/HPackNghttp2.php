@@ -134,8 +134,15 @@ final class HPackNghttp2
 
         $return = self::$ffi->nghttp2_hd_inflate_new(FFI::addr($this->inflatePtr));
         if ($return !== 0) {
+            self::$ffi->nghttp2_hd_deflate_del($this->deflatePtr);
             throw new \RuntimeException('Failed to init inflate context');
         }
+    }
+
+    public function __destruct()
+    {
+        self::$ffi->nghttp2_hd_inflate_del($this->inflatePtr);
+        self::$ffi->nghttp2_hd_deflate_del($this->deflatePtr);
     }
 
     /**
