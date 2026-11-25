@@ -18,11 +18,15 @@ typedef struct {
 
 int nghttp2_hd_deflate_new(nghttp2_hd_deflater **deflater_ptr, size_t deflate_hd_table_bufsize_max);
 
+void nghttp2_hd_deflate_del(nghttp2_hd_deflater *deflater);
+
 ssize_t nghttp2_hd_deflate_hd(nghttp2_hd_deflater *deflater, uint8_t *buf, size_t buflen, const nghttp2_nv *nva, size_t nvlen);
 
 size_t nghttp2_hd_deflate_bound(nghttp2_hd_deflater *deflater, const nghttp2_nv *nva, size_t nvlen);
 
 int nghttp2_hd_inflate_new(nghttp2_hd_inflater **inflater_ptr);
+
+void nghttp2_hd_inflate_del(nghttp2_hd_inflater *inflater);
 
 ssize_t nghttp2_hd_inflate_hd2(nghttp2_hd_inflater *inflater, nghttp2_nv *nv_out, int *inflate_flags, const uint8_t *in, size_t inlen, int in_final);
 
