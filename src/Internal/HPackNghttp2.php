@@ -145,11 +145,6 @@ final class HPackNghttp2
             self::$ffi->nghttp2_hd_inflate_del($this->inflatePtr);
             $this->inflatePtr = null;
         }
-
-        if ($this->deflatePtr !== null) {
-            self::$ffi->nghttp2_hd_deflate_del($this->deflatePtr);
-            $this->deflatePtr = null;
-        }
     }
 
     /**
