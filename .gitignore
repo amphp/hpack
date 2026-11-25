@@ -7,3 +7,6 @@ phpunit.xml
 vendor
 fuzz
 php-fuzzer.phar
+# run-tests.php artifacts
+/test/phpt/*
+!/test/phpt/*.phpt

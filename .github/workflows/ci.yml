@@ -103,3 +103,52 @@ jobs:
           PHP_CS_FIXER_IGNORE_ENV: 1
         run: vendor/bin/php-cs-fixer --diff --dry-run -v fix
         if: runner.os != 'Windows' && matrix.php-cs-fixer != 'skip'
+
+  asan:
+    name: PHP 8.5 with AddressSanitizer
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Checkout php-src
+        uses: actions/checkout@v7
+        with:
+          repository: php/php-src
+          ref: PHP-8.5
+          path: php-src
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends bison clang libffi-dev libnghttp2-14 re2c
+
+      - name: Build PHP with AddressSanitizer
+        working-directory: php-src
+        run: |
+          ./buildconf --force
+          CC=clang CXX=clang++ ./configure --disable-all --enable-cli --enable-debug --enable-address-sanitizer --with-ffi
+          make -j"$(nproc)"
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+
+      - name: Install dependencies
+        run: |
+          composer remove --dev --no-update nikic/php-fuzzer
+          composer update --optimize-autoloader --no-interaction --no-progress
+
+      - name: Check that nghttp2 is available via FFI
+        run: |
+          php-src/sapi/cli/php -r 'require "vendor/autoload.php"; exit(Amp\Http\Internal\HPackNghttp2::isSupported() ? 0 : 1);'
+
+      - name: Run phpt tests with AddressSanitizer
+        run: |
+          php-src/sapi/cli/php php-src/run-tests.php -P --asan -q --show-diff test/phpt
+          if ls test/phpt/*.diff > /dev/null 2>&1; then
+            exit 1
+          fi
